@@ -239,7 +239,7 @@ export type Database = {
           notes: string
           performed_by: string
           previous_stock: number
-          product_id: string
+          product_id: string | null
           quantity: number
           sector_id: string | null
         }
@@ -255,7 +255,7 @@ export type Database = {
           notes: string
           performed_by: string
           previous_stock: number
-          product_id: string
+          product_id?: string | null
           quantity: number
           sector_id?: string | null
         }
@@ -271,7 +271,7 @@ export type Database = {
           notes?: string
           performed_by?: string
           previous_stock?: number
-          product_id?: string
+          product_id?: string | null
           quantity?: number
           sector_id?: string | null
         }
