@@ -237,7 +237,7 @@ export type Database = {
           movement_type: string
           new_stock: number
           notes: string
-          performed_by: string
+          performed_by: string | null
           previous_stock: number
           product_id: string | null
           quantity: number
@@ -253,7 +253,7 @@ export type Database = {
           movement_type: string
           new_stock: number
           notes: string
-          performed_by: string
+          performed_by?: string | null
           previous_stock: number
           product_id?: string | null
           quantity: number
@@ -269,7 +269,7 @@ export type Database = {
           movement_type?: string
           new_stock?: number
           notes?: string
-          performed_by?: string
+          performed_by?: string | null
           previous_stock?: number
           product_id?: string | null
           quantity?: number
