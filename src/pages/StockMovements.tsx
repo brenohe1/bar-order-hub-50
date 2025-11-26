@@ -167,12 +167,20 @@ const StockMovements = () => {
       // Manually join with profiles - handle missing profiles gracefully
       const movementsWithProfiles = await Promise.all(
         (movementsData || []).map(async (movement: any) => {
+          // If no performed_by (system movements), don't fetch profile
+          if (!movement.performed_by) {
+            return {
+              ...movement,
+              profiles: { full_name: 'Sistema' },
+            };
+          }
+          
           try {
             const { data: profile } = await supabase
               .from("profiles")
               .select("full_name")
               .eq("id", movement.performed_by)
-              .single();
+              .maybeSingle();
             
             return {
               ...movement,
