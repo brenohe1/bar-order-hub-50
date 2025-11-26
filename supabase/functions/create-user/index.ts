@@ -65,7 +65,7 @@ serve(async (req) => {
 
     console.log("Creating user:", { email, fullName, role, sectorId, position });
 
-    // Create the user account
+    // Create the user account with user_metadata
     const { data: newUser, error: createError } = await supabaseClient.auth.admin.createUser({
       email,
       password,
@@ -85,19 +85,22 @@ serve(async (req) => {
 
     console.log("User created successfully:", newUser.user.id);
 
-    // Update profile with sector and position if provided
-    if (sectorId || position) {
-      const { error: profileError } = await supabaseClient
-        .from("profiles")
-        .update({
-          sector_id: sectorId || null,
-          position: position || null,
-        })
-        .eq("id", newUser.user.id);
+    // Wait a bit for the trigger to create the profile
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-      if (profileError) {
-        console.error("Profile update error:", profileError);
-      }
+    // Update profile with full_name, sector and position
+    const { error: profileError } = await supabaseClient
+      .from("profiles")
+      .update({
+        full_name: fullName,
+        sector_id: sectorId || null,
+        position: position || null,
+      })
+      .eq("id", newUser.user.id);
+
+    if (profileError) {
+      console.error("Profile update error:", profileError);
+      // Don't fail the user creation if profile update fails
     }
 
     // Assign role to the user
