@@ -292,9 +292,17 @@ const Orders = () => {
     }
 
     try {
+      const updateData: any = { status: newStatus };
+      
+      // If status is 'entregue', include delivered_by and delivered_at
+      if (newStatus === "entregue") {
+        updateData.delivered_by = currentUserId;
+        updateData.delivered_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from("orders")
-        .update({ status: newStatus })
+        .update(updateData)
         .eq("id", orderId);
 
       if (error) throw error;
