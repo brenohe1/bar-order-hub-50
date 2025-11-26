@@ -65,23 +65,24 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isGerente, loading: roleLoading } = useUserRole();
 
   useEffect(() => {
     // Wait for role to load before checking
     if (roleLoading) return;
     
-    if (!isAdmin) {
+    // Allow both admins and gerentes to access
+    if (!isAdmin && !isGerente) {
       toast({
         title: "Acesso negado",
-        description: "Apenas administradores podem acessar esta página",
+        description: "Apenas administradores e gerentes podem acessar esta página",
         variant: "destructive",
       });
       window.location.href = "/";
       return;
     }
     loadData();
-  }, [isAdmin, roleLoading]);
+  }, [isAdmin, isGerente, roleLoading]);
 
   const loadData = async () => {
     try {
