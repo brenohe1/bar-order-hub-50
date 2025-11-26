@@ -45,18 +45,17 @@ serve(async (req) => {
       );
     }
 
-    // Check if requesting user is admin
+    // Check if requesting user is admin or gerente
     const { data: roles, error: roleError } = await supabaseClient
       .from("user_roles")
       .select("role")
       .eq("user_id", requestingUser.id)
-      .eq("role", "admin")
-      .single();
+      .in("role", ["admin", "gerente"]);
 
-    if (roleError || !roles) {
+    if (roleError || !roles || roles.length === 0) {
       console.error("Permission check error:", roleError);
       return new Response(
-        JSON.stringify({ error: "Acesso negado. Apenas administradores podem criar usuários." }),
+        JSON.stringify({ error: "Acesso negado. Apenas administradores e gerentes podem criar usuários." }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
