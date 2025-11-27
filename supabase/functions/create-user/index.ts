@@ -84,50 +84,27 @@ serve(async (req) => {
 
     console.log("User created successfully:", newUser.user.id);
 
-    // Wait for the trigger to create the profile
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Create profile directly (more reliable than waiting for trigger)
+    const { error: profileError } = await supabaseClient
+      .from("profiles")
+      .insert({
+        id: newUser.user.id,
+        full_name: fullName,
+        sector_id: sectorId || null,
+        position: position || null,
+      });
 
-    // Verify profile was created and update it
-    let retries = 0;
-    const maxRetries = 5;
-    let profileUpdated = false;
-
-    while (retries < maxRetries && !profileUpdated) {
-      const { data: existingProfile } = await supabaseClient
-        .from("profiles")
-        .select("id")
-        .eq("id", newUser.user.id)
-        .maybeSingle();
-
-      if (existingProfile) {
-        // Profile exists, now update it
-        const { error: profileError } = await supabaseClient
-          .from("profiles")
-          .update({
-            full_name: fullName,
-            sector_id: sectorId || null,
-            position: position || null,
-          })
-          .eq("id", newUser.user.id);
-
-        if (profileError) {
-          console.error("Profile update error:", profileError);
-        } else {
-          profileUpdated = true;
-          console.log("Profile updated successfully");
-        }
-        break;
-      } else {
-        // Profile not created yet, wait and retry
-        retries++;
-        console.log(`Profile not found, retry ${retries}/${maxRetries}`);
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
+    if (profileError) {
+      console.error("Profile creation error:", profileError);
+      // Try to delete the user if profile creation fails
+      await supabaseClient.auth.admin.deleteUser(newUser.user.id);
+      return new Response(
+        JSON.stringify({ error: "Erro ao criar perfil do usuário" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    if (!profileUpdated) {
-      console.error("Failed to update profile after retries");
-    }
+    console.log("Profile created successfully");
 
     // Assign role to the user
     const { error: roleAssignError } = await supabaseClient
