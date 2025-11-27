@@ -31,16 +31,15 @@ serve(async (req) => {
       throw new Error("Usuário não autenticado");
     }
 
-    // Check if user is admin
-    const { data: userRole } = await supabaseClient
+    // Check if user is admin or gerente
+    const { data: roles, error: roleError } = await supabaseClient
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .eq("role", "admin")
-      .single();
+      .in("role", ["admin", "gerente"]);
 
-    if (!userRole) {
-      throw new Error("Apenas administradores podem atualizar usuários");
+    if (roleError || !roles || roles.length === 0) {
+      throw new Error("Apenas administradores e gerentes podem atualizar usuários");
     }
 
     const { userId, fullName, role, sectorId, position, email, password } = await req.json();
