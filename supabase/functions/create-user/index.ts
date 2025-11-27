@@ -84,22 +84,49 @@ serve(async (req) => {
 
     console.log("User created successfully:", newUser.user.id);
 
-    // Wait a bit for the trigger to create the profile
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for the trigger to create the profile
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Update profile with full_name, sector and position
-    const { error: profileError } = await supabaseClient
-      .from("profiles")
-      .update({
-        full_name: fullName,
-        sector_id: sectorId || null,
-        position: position || null,
-      })
-      .eq("id", newUser.user.id);
+    // Verify profile was created and update it
+    let retries = 0;
+    const maxRetries = 5;
+    let profileUpdated = false;
 
-    if (profileError) {
-      console.error("Profile update error:", profileError);
-      // Don't fail the user creation if profile update fails
+    while (retries < maxRetries && !profileUpdated) {
+      const { data: existingProfile } = await supabaseClient
+        .from("profiles")
+        .select("id")
+        .eq("id", newUser.user.id)
+        .maybeSingle();
+
+      if (existingProfile) {
+        // Profile exists, now update it
+        const { error: profileError } = await supabaseClient
+          .from("profiles")
+          .update({
+            full_name: fullName,
+            sector_id: sectorId || null,
+            position: position || null,
+          })
+          .eq("id", newUser.user.id);
+
+        if (profileError) {
+          console.error("Profile update error:", profileError);
+        } else {
+          profileUpdated = true;
+          console.log("Profile updated successfully");
+        }
+        break;
+      } else {
+        // Profile not created yet, wait and retry
+        retries++;
+        console.log(`Profile not found, retry ${retries}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+
+    if (!profileUpdated) {
+      console.error("Failed to update profile after retries");
     }
 
     // Assign role to the user
