@@ -133,18 +133,76 @@ const Products = () => {
     };
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
       if (editingProduct) {
+        const previousStock = editingProduct.current_stock;
+        const newStock = productData.current_stock;
+        const stockDifference = newStock - previousStock;
+
         const { error } = await supabase
           .from("products")
           .update(productData)
           .eq("id", editingProduct.id);
 
         if (error) throw error;
+
+        // Register stock movement if stock changed
+        if (stockDifference !== 0) {
+          const movementType = stockDifference > 0 ? "entrada" : "saida";
+          const quantity = Math.abs(stockDifference);
+
+          const { error: movementError } = await supabase
+            .from("stock_movements")
+            .insert({
+              product_id: editingProduct.id,
+              movement_type: movementType,
+              quantity: quantity,
+              previous_stock: previousStock,
+              new_stock: newStock,
+              notes: `Ajuste manual de estoque ao editar produto`,
+              performed_by: user.id,
+              movement_category: 'produto',
+              sector_id: null,
+            });
+
+          if (movementError) {
+            console.error("Error registering movement:", movementError);
+          }
+        }
+
         toast({ title: "Produto atualizado com sucesso!" });
       } else {
-        const { error } = await supabase.from("products").insert([productData]);
+        const { data: newProduct, error } = await supabase
+          .from("products")
+          .insert([productData])
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Register initial stock as entrada if > 0
+        if (productData.current_stock > 0) {
+          const { error: movementError } = await supabase
+            .from("stock_movements")
+            .insert({
+              product_id: newProduct.id,
+              movement_type: "entrada",
+              quantity: productData.current_stock,
+              previous_stock: 0,
+              new_stock: productData.current_stock,
+              notes: `Estoque inicial ao criar produto`,
+              performed_by: user.id,
+              movement_category: 'produto',
+              sector_id: null,
+            });
+
+          if (movementError) {
+            console.error("Error registering initial stock movement:", movementError);
+          }
+        }
+
         toast({ title: "Produto criado com sucesso!" });
       }
 
